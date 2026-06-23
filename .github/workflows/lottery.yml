@@ -1,0 +1,53 @@
+name: Vietlott Lottery Bot
+
+on:
+  schedule:
+    # Chạy mỗi giờ từ 18:00-22:00 VN (11:00-15:00 UTC)
+    - cron: '0 11 * * *'
+    - cron: '0 12 * * *'
+    - cron: '0 13 * * *'
+    - cron: '0 14 * * *'
+    - cron: '0 15 * * *'
+  workflow_dispatch:  # Cho phép chạy thủ công
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Cần để commit lottery_data.json
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Restore lottery data
+        run: |
+          if [ -f lottery_data.json ]; then
+            echo "Data file found"
+          else
+            echo "No data file, will be created"
+          fi
+
+      - name: Run bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python lottery_bot.py
+
+      - name: Save lottery data
+        run: |
+          git config user.name "Lottery Bot"
+          git config user.email "bot@github.com"
+          git add lottery_data.json || true
+          git diff --staged --quiet || git commit -m "Update lottery data $(date +'%d/%m/%Y %H:%M')"
+          git push || true
